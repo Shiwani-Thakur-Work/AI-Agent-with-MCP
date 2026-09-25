@@ -88,7 +88,7 @@ ${reviewsText}
                 },
                 { role: 'user', content: prompt }
             ],
-            model: process.env.GROQ_MODEL || 'llama3-70b-8192',
+            model: process.env.GROQ_MODEL || 'llama-3.1-70b-versatile',
             response_format: { type: 'json_object' },
             max_tokens: 4000,
             temperature: 0.4
