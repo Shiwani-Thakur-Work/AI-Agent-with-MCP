@@ -88,7 +88,7 @@ ${reviewsText}
                 },
                 { role: 'user', content: prompt }
             ],
-            model: process.env.GROQ_MODEL || 'llama-3.1-70b-versatile',
+            model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
             response_format: { type: 'json_object' },
             max_tokens: 4000,
             temperature: 0.4
