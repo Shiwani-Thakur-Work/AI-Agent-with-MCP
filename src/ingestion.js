@@ -1,8 +1,7 @@
 // Load environment variables from .env file
 require('dotenv').config();
 
-// Require scrapers for Google Play Store and Apple App Store
-const gplay = require('google-play-scraper').default || require('google-play-scraper');
+// Require app-store-scraper (CommonJS)
 const appStore = require('app-store-scraper');
 
 // Read Target App IDs from environment or use default placeholders (Spotify)
@@ -21,6 +20,11 @@ const MS_IN_WEEK = 7 * 24 * 60 * 60 * 1000;
 async function fetchPlayStoreReviews(appId) {
     try {
         console.log(`[Ingestion] Fetching Play Store reviews for ${appId}...`);
+        
+        // Dynamically import google-play-scraper since newer versions are ESM
+        const gplayModule = await import('google-play-scraper');
+        const gplay = gplayModule.default || gplayModule;
+
         const result = await gplay.reviews({
             appId: appId,
             sort: gplay.sort.NEWEST,
