@@ -1,0 +1,173 @@
+[
+  {
+    "id": "week-3",
+    "week": "Week of Sep 22 – 28, 2026",
+    "date": "2026-09-25",
+    "totalReviews": 199,
+    "playStore": 120,
+    "appStore": 79,
+    "sentiment": {
+      "positive": 38,
+      "neutral": 22,
+      "negative": 40
+    },
+    "themes": [
+      {
+        "id": "ads",
+        "title": "Ads & Premium Pressure",
+        "icon": "📢",
+        "color": "#f43f5e",
+        "percentage": 45,
+        "description": "Users cite intrusive ads, limited skips and aggressive upsell to premium as the #1 pain point.",
+        "quotes": [
+          "isme premium lene ke liye force kar raha hai… bakwas app hai download mat karo",
+          "such a terrible app full of non stop advertising"
+        ],
+        "actionItem": "Redesign free tier: cap ad length, introduce optional ad-free micro-subscriptions, make premium upsell non-intrusive."
+      },
+      {
+        "id": "playback",
+        "title": "Playback & Reliability Bugs",
+        "icon": "🔧",
+        "color": "#f59e0b",
+        "percentage": 30,
+        "description": "Song stuttering, false 'offline' status, tracks cutting off mid-play and random shuffle issues.",
+        "quotes": [
+          "Keeps saying I am offline most of times when I am 100% with Internet",
+          "app is constantly stuttering like a scratched CD when playing music"
+        ],
+        "actionItem": "Launch stability sprint: fix offline detection, audio buffering and search bugs across iOS/Android."
+      },
+      {
+        "id": "discovery",
+        "title": "Discovery & Personalisation",
+        "icon": "🎯",
+        "color": "#7c5dfa",
+        "percentage": 18,
+        "description": "Repetitive recommendations, inability to hide unwanted podcasts, missing lyrics, smart shuffle glitches.",
+        "quotes": [
+          "For Pete's sake, I've been clicking 'Not Interested' for two months on this one podcast… still in my recommended",
+          "lyrics are missing from most songs, smart shuffle not working, hear the same 30 songs every day"
+        ],
+        "actionItem": "Refine recommendation engine: hide-podcast option, restore lyrics, flexible skip limits, preserve music queue."
+      }
+    ],
+    "report": "Weekly Mobile-Store Feedback Pulse (Week of Sep 22-28, 2026)\n\nTop Themes:\n1. Monetization/Ads – 45% of low-rating reviews cite forced premium upsell and frequent ads.\n2. Technical Stability – 30% report stuttering, false offline status, playback cuts, and search glitches.\n3. Recommendation & Library – 18% complain about repeat songs, limited skips, hidden podcasts and lost liked tracks.\n\nKey User Quotes:\n- \"isme premium lene ke liye force kar raha hai aagar na le to mere pasand ka gana sunne nahi de raha hai bakwas app hai download mat karo\"\n- \"app has really deteriorated over time. It's constantly stuttering like a scratched CD when playing music, and the search feature is constantly glitching.\"\n- \"The same problem always. I cannot play a full song. It always plays for a little time. Like a trial song.\"\n\nAction Items:\n1. Redesign ad flow: cap ad frequency, add a 7-day ad-free trial to entice upgrades.\n2. Launch a stability sprint: fix offline detection, audio buffering, and search bugs across iOS/Android.\n3. Refine recommendation engine: introduce flexible skip limits, a hide-podcast option, and preserve music queue when switching to podcasts.\n\nOverall Sentiment: Users love Spotify's catalog and UI, but ad pressure, bugs, and repetitive content risk churn.",
+    "emailDraft": "Subject: Weekly Mobile-Store Feedback Pulse – Actionable Insights\n\nHi Team,\n\nPlease find the latest Mobile-Store Feedback Pulse attached. The report highlights three critical themes – ad pressure, technical stability, and recommendation quirks – along with direct user quotes and concrete action items.\n\nYou can view the full report here: https://docs.google.com/document/d/1F2ZVIJwyLtkFHCJbUKeltOk4Fr8g5KH_TlMFFcKGc1c/edit\n\nLet's prioritize the outlined actions to boost user satisfaction and premium uptake.\n\nThanks,\nShiwani, Product Manager",
+    "docUrl": "https://docs.google.com/document/d/1F2ZVIJwyLtkFHCJbUKeltOk4Fr8g5KH_TlMFFcKGc1c/edit"
+  },
+  {
+    "id": "week-2",
+    "week": "Week of Sep 15 – 21, 2026",
+    "date": "2026-09-18",
+    "totalReviews": 183,
+    "playStore": 104,
+    "appStore": 79,
+    "sentiment": {
+      "positive": 42,
+      "neutral": 20,
+      "negative": 38
+    },
+    "themes": [
+      {
+        "id": "ads",
+        "title": "Ads & Premium Pressure",
+        "icon": "📢",
+        "color": "#f43f5e",
+        "percentage": 40,
+        "description": "Aggressive premium prompts and intrusive ad frequency continue as the top complaint.",
+        "quotes": [
+          "I can't even listen to one song without an ad",
+          "forced me to go premium just to skip songs"
+        ],
+        "actionItem": "A/B test reduced ad frequency for free tier users in selected markets."
+      },
+      {
+        "id": "playback",
+        "title": "Playback Reliability",
+        "icon": "🔧",
+        "color": "#f59e0b",
+        "percentage": 28,
+        "description": "Audio stuttering on stable connections and track cut-offs persist across Android builds.",
+        "quotes": [
+          "songs cut off after 30 seconds",
+          "random crashes on my Pixel 7"
+        ],
+        "actionItem": "Priority fix for Android streaming buffer and crash telemetry analysis."
+      },
+      {
+        "id": "ui",
+        "title": "UI & Navigation",
+        "icon": "🖥️",
+        "color": "#3b82f6",
+        "percentage": 22,
+        "description": "Users confused by recent redesign—library reorganisation and bottom nav changes.",
+        "quotes": [
+          "Where did my playlists go?",
+          "the new UI is very confusing"
+        ],
+        "actionItem": "Ship an in-app tour for the redesigned navigation and roll back intrusive library changes."
+      }
+    ],
+    "report": "Week 2 pulse report data here...",
+    "emailDraft": "Week 2 email draft here...",
+    "docUrl": null
+  },
+  {
+    "id": "week-1",
+    "week": "Week of Sep 8 – 14, 2026",
+    "date": "2026-09-11",
+    "totalReviews": 171,
+    "playStore": 98,
+    "appStore": 73,
+    "sentiment": {
+      "positive": 45,
+      "neutral": 22,
+      "negative": 33
+    },
+    "themes": [
+      {
+        "id": "ads",
+        "title": "Ads & Premium Pressure",
+        "icon": "📢",
+        "color": "#f43f5e",
+        "percentage": 36,
+        "description": "Steady complaints about ad volume on free tier.",
+        "quotes": [
+          "too many ads",
+          "just let me listen in peace"
+        ],
+        "actionItem": "Consider ad-free weekend promotions."
+      },
+      {
+        "id": "discovery",
+        "title": "Discovery & Personalisation",
+        "icon": "🎯",
+        "color": "#7c5dfa",
+        "percentage": 30,
+        "description": "Users craving better recommendation diversity and smarter playlist generation.",
+        "quotes": [
+          "Daylist is incredible",
+          "my recommendations are stuck in 2019"
+        ],
+        "actionItem": "Accelerate Daylist rollout globally and tune collaborative filtering weights."
+      },
+      {
+        "id": "offline",
+        "title": "Offline & Downloads",
+        "icon": "📥",
+        "color": "#22d3a0",
+        "percentage": 25,
+        "description": "Download limits for free users and failed offline-mode syncs.",
+        "quotes": [
+          "can't download songs without premium",
+          "offline songs disappear randomly"
+        ],
+        "actionItem": "Increase free download quota to 30 songs and fix sync-on-resume bug."
+      }
+    ],
+    "report": "Week 1 pulse report data here...",
+    "emailDraft": "Week 1 email draft here...",
+    "docUrl": null
+  }
+]

@@ -1,0 +1,34 @@
+name: Weekly Pulse Report
+
+on:
+  schedule:
+    # Runs at 9:00 AM UTC every Monday
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allows you to manually trigger the workflow from the GitHub UI
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Weekly Pulse Orchestrator
+      env:
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+        PULSE_DOC_ID: ${{ secrets.PULSE_DOC_ID }}
+        RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+        MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL }}
+        PLAY_STORE_APP_IDS: ${{ secrets.PLAY_STORE_APP_IDS }}
+        APP_STORE_APP_IDS: ${{ secrets.APP_STORE_APP_IDS }}
+      run: node index.js
