@@ -99,7 +99,7 @@ const buildPath = path.join(__dirname, 'dashboard', 'dist');
 app.use(express.static(buildPath));
 
 // For any other route, send the index.html so React Router (or SPA) works
-app.get('*', (req, res) => {
+app.use((req, res) => {
     if (fs.existsSync(path.join(buildPath, 'index.html'))) {
         res.sendFile(path.join(buildPath, 'index.html'));
     } else {
