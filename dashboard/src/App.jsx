@@ -500,11 +500,7 @@ export default function App() {
     setTimeout(() => setToast(null), ms);
   };
 
-  const handleRun = async () => {
-    if (!apiOnline) {
-      showToast('error', '⚠️  API server is offline. Run: node server.js in the project folder.');
-      return;
-    }
+    const handleRun = async () => {
     setRunning(true);
     showToast('info', '⚡ Pipeline started — fetching reviews and analysing with Groq LLM…', 120000);
 
