@@ -3,16 +3,27 @@ const Groq = require('groq-sdk');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Priority list — smaller/faster models first to stay within free-tier 8k TPM.
+// Priority list: smaller/faster models first to stay within free-tier 8k TPM.
+// Includes both meta-llama/ prefix (current) and legacy bare IDs for compatibility.
+// openai/gpt-oss-* models excluded — they are reasoning models incompatible with json_object mode.
 const PREFERRED_MODELS = [
+    'meta-llama/llama-3.1-8b-instant',
+    'meta-llama/llama-3.3-70b-versatile',
+    'meta-llama/llama-3.1-70b-versatile',
+    'meta-llama/llama3-70b-8192',
     'llama-3.1-8b-instant',
-    'llama3-8b-8192',
     'llama-3.3-70b-versatile',
     'llama-3.1-70b-versatile',
     'llama3-70b-8192',
-    'openai/gpt-oss-20b',
-    'openai/gpt-oss-120b',
+    'llama3-8b-8192',
 ];
+
+// Prefixes for models known to be incompatible with response_format:json_object.
+const EXCLUDED_PREFIXES = ['openai/gpt-oss', 'qwen'];
+
+function isExcluded(id) {
+    return EXCLUDED_PREFIXES.some(function(p) { return id.indexOf(p) === 0; });
+}
 
 /** Queries the live Groq /models endpoint and returns the best available model. */
 async function resolveBestModel() {
@@ -21,28 +32,29 @@ async function resolveBestModel() {
         return process.env.GROQ_MODEL;
     }
     try {
-        const page = await groq.models.list();
-        const activeIds = new Set((page.data || []).map(function(m) { return m.id; }));
+        var page = await groq.models.list();
+        var activeIds = new Set((page.data || []).map(function(m) { return m.id; }));
+        console.log('[LLM] Available models: ' + Array.from(activeIds).join(', '));
         for (var i = 0; i < PREFERRED_MODELS.length; i++) {
             if (activeIds.has(PREFERRED_MODELS[i])) {
                 console.log('[LLM] Auto-selected model: ' + PREFERRED_MODELS[i]);
                 return PREFERRED_MODELS[i];
             }
         }
-        var first = (page.data || [])[0] && (page.data || [])[0].id;
-        if (first) {
-            console.warn('[LLM] No preferred model available. Falling back to: ' + first);
-            return first;
+        // No preferred model found — pick first non-excluded model
+        var compatible = (page.data || []).filter(function(m) { return !isExcluded(m.id); });
+        if (compatible.length > 0) {
+            console.warn('[LLM] No preferred model found. Falling back to: ' + compatible[0].id);
+            return compatible[0].id;
         }
     } catch (err) {
         console.warn('[LLM] Could not fetch model list:', err.message);
     }
-    return 'llama-3.1-8b-instant';
+    return 'meta-llama/llama-3.1-8b-instant';
 }
 
 /**
- * Parse the x-ratelimit-reset-tokens header (e.g. '37.5s', '1m20s') into ms.
- * Returns 0 if the header is missing or unparseable.
+ * Parse x-ratelimit-reset-tokens header (e.g. '37.5s', '1m20s') into milliseconds.
  */
 function parseResetMs(headers) {
     try {
@@ -54,9 +66,7 @@ function parseResetMs(headers) {
         if (mMatch) total += parseInt(mMatch[1], 10) * 60000;
         if (sMatch) total += parseFloat(sMatch[1]) * 1000;
         return total;
-    } catch (e) {
-        return 0;
-    }
+    } catch (e) { return 0; }
 }
 
 /**
@@ -69,11 +79,9 @@ async function generatePulseContent(reviews) {
 
     var model = await resolveBestModel();
 
-    // ── Aggressive token budget ────────────────────────────────────────────
-    // Free tier: 8 000 TPM.  Target: ~2 000 prompt + 1 200 output = 3 200 total.
-    // This leaves headroom even when tokens from a prior request haven't reset yet.
-    var MAX_REVIEWS    = 40;   // ~40 reviews × 30 tok avg = 1 200 tok
-    var MAX_REVIEW_LEN = 120;  // chars, ~30 tokens each
+    // Free tier: 8 000 TPM. Target: ~2 000 prompt + 1 200 output = 3 200 total.
+    var MAX_REVIEWS    = 40;
+    var MAX_REVIEW_LEN = 120;
     var MAX_OUT_TOKENS = 1200;
 
     var reviewsToProcess = reviews.slice(0, MAX_REVIEWS);
@@ -84,16 +92,14 @@ async function generatePulseContent(reviews) {
         return '[' + r.rating + 'star] ' + text;
     }).join('\n');
 
-    // Compact prompt — NO JSON schema example (saves ~400 tokens).
-    // Field names are described inline so the model knows exactly what to produce.
     var prompt = [
         'Analyse these ' + reviewsToProcess.length + ' app reviews (date: ' + today + ').',
         'Return ONLY a raw JSON object with these exact keys:',
         '  meta: { totalReviews(int), weeksAnalysed(12), generatedAt(ISO), sentimentBreakdown:{positive,neutral,negative as ints summing to 100} }',
-        '  themes: array of exactly 3 objects: { id(one of ads/playback/discovery/ui/offline/performance/content/pricing/support), title(<=5 words), icon(emoji), description(2 sentences), percentage(int), quotes:[2 verbatim strings, strip PII], actionItem(string) }',
+        '  themes: array of exactly 3 objects: { id(one of ads/playback/discovery/ui/offline/performance/content/pricing/support), title(<=5 words), icon(emoji), description(2 sentences), percentage(int), quotes:[2 verbatim strings no PII], actionItem(string) }',
         '  report: string, 150-word executive summary',
-        '  emailDraft: string starting with Subject:, 80 words, signed Best\\nShiwani\\nProduct Manager, includes [REPORT_URL]',
-        'No markdown. No code fences. No extra text. Just the JSON.',
+        '  emailDraft: string starting with Subject:, ~80 words, signed Best\\nShiwani\\nProduct Manager, includes [REPORT_URL]',
+        'No markdown. No code fences. Only the JSON object.',
         '',
         'REVIEWS:',
         reviewsText
@@ -129,44 +135,43 @@ async function generatePulseContent(reviews) {
 
         } catch (error) {
             lastError = error;
-            var code   = error && error.error && error.error.error && error.error.error.code;
-            var failedGen = error && error.error && error.error.error && error.error.error.failed_generation;
+            var errObj     = error && error.error && error.error.error;
+            var code       = errObj && errObj.code;
+            var failedGen  = errObj && errObj.failed_generation;
 
             var isRateLimit    = error.status === 429;
             var isModelGone    = error.status === 404 || code === 'model_decommissioned';
-            // failed_generation==='' means the model ran out of output tokens (token exhaustion),
-            // not a bad prompt. Treat it like a rate-limit: wait for the TPM window to reset.
+            // failed_generation==='' with json_validate_failed = token-budget exhaustion,
+            // NOT a prompt problem. Wait for the TPM window to reset.
             var isTokenExhaust = code === 'json_validate_failed' && failedGen === '';
             var isJsonError    = code === 'json_validate_failed' && failedGen !== '';
 
             if (isModelGone) {
-                console.error('[LLM] Model ' + model + ' not found. Set GROQ_MODEL secret to override.');
+                console.error('[LLM] Model gone: ' + model + '. Set GROQ_MODEL secret to override.');
                 throw error;
             }
 
             if (attempt < MAX_RETRIES) {
                 var waitMs;
                 if (isTokenExhaust || isRateLimit) {
-                    // Read the exact reset time from the response header, add a 5s buffer.
                     var resetMs = parseResetMs(error.headers);
                     waitMs = resetMs > 0 ? resetMs + 5000 : 65000;
-                    console.warn('[LLM] Token quota exhausted on attempt ' + attempt + '. Waiting ' + Math.ceil(waitMs / 1000) + 's for TPM window reset...');
+                    console.warn('[LLM] Token quota exhausted on attempt ' + attempt + '. Waiting ' + Math.ceil(waitMs / 1000) + 's...');
                 } else if (isJsonError) {
                     waitMs = 5000;
                     console.warn('[LLM] JSON validation error on attempt ' + attempt + '. Retrying in 5s...');
                 } else {
                     waitMs = 10000;
-                    console.warn('[LLM] Unexpected error on attempt ' + attempt + '. Retrying in 10s...');
+                    console.warn('[LLM] Error on attempt ' + attempt + '. Retrying in 10s...');
                 }
                 await new Promise(function(res) { setTimeout(res, waitMs); });
                 continue;
             }
 
-            console.error('[LLM] All attempts failed:', error.message || error);
+            console.error('[LLM] All attempts exhausted:', error.message || error);
             throw error;
         }
     }
-
     throw lastError;
 }
 
