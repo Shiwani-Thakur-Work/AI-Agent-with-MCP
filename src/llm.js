@@ -78,8 +78,7 @@ async function generatePulseContent(reviews) {
             const text = (r.text || '').slice(0, MAX_REVIEW_LEN);
             return `[${r.rating}★] ${text}`;
         })
-        .join('
-');
+        .join('\n');
 
     const themeIds = 'ads, playback, discovery, ui, offline, performance, content, pricing, support';
     const jsonStructure = JSON.stringify({
