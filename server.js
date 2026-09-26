@@ -38,6 +38,8 @@ function runPipeline() {
         }
         pipelineRunning = true;
         console.log('[API] Starting pipeline…');
+        console.log('[API] Does server have GROQ_API_KEY?', !!process.env.GROQ_API_KEY);
+        console.log('[API] Environment keys available:', Object.keys(process.env).join(', '));
 
         execFile('node', ['index.js'], { cwd: __dirname, env: process.env, timeout: 180_000 }, (err, stdout, stderr) => {
             pipelineRunning = false;
