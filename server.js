@@ -1,24 +1,17 @@
-/**
- * Dashboard API Server
- * Serves pulse_draft.json and triggers the pipeline on demand.
- * Run: node server.js  (keep running alongside the dashboard)
- */
 require('dotenv').config();
-const http = require('http');
+const express = require('express');
+const cors = require('cors');
 const { execFile } = require('child_process');
-const fs   = require('fs');
+const fs = require('fs');
 const path = require('path');
 
-const PORT       = process.env.API_PORT || 3001;
+const app = express();
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
 const DRAFT_PATH = path.join(__dirname, 'data', 'pulse_draft.json');
 const HISTORY_PATH = path.join(__dirname, 'data', 'history.json');
 
-// ── CORS headers ──────────────────────────────────────────────────────────────
-function setCORS(res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
+app.use(cors());
+app.use(express.json());
 
 // ── Load / save history ───────────────────────────────────────────────────────
 function loadHistory() {
@@ -35,7 +28,7 @@ function saveHistory(history) {
 
 // ── Pipeline state ────────────────────────────────────────────────────────────
 let pipelineRunning = false;
-let lastStatus      = null;   // { success, message, timestamp }
+let lastStatus = null;
 
 function runPipeline() {
     return new Promise((resolve) => {
@@ -59,7 +52,6 @@ function runPipeline() {
             try {
                 const fresh = JSON.parse(fs.readFileSync(DRAFT_PATH, 'utf8'));
                 const history = loadHistory();
-                // Avoid duplicate IDs
                 if (!history.find(h => h.id === fresh.id)) {
                     history.unshift(fresh);
                     if (history.length > 12) history.pop(); // keep last 12 runs
@@ -76,59 +68,47 @@ function runPipeline() {
     });
 }
 
-// ── HTTP Server ───────────────────────────────────────────────────────────────
-const server = http.createServer(async (req, res) => {
-    setCORS(res);
-
-    if (req.method === 'OPTIONS') {
-        res.writeHead(204); res.end(); return;
+// ── API Routes ───────────────────────────────────────────────────────────────
+app.get('/api/pulse', (req, res) => {
+    try {
+        const data = fs.readFileSync(DRAFT_PATH, 'utf8');
+        res.json(JSON.parse(data));
+    } catch {
+        res.status(404).json({ error: 'No pulse data found. Run the pipeline first.' });
     }
-
-    const url = req.url.split('?')[0];
-
-    // GET /api/pulse — latest draft
-    if (req.method === 'GET' && url === '/api/pulse') {
-        try {
-            const data = fs.readFileSync(DRAFT_PATH, 'utf8');
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(data);
-        } catch {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'No pulse data found. Run the pipeline first.' }));
-        }
-        return;
-    }
-
-    // GET /api/history — all archived runs
-    if (req.method === 'GET' && url === '/api/history') {
-        const history = loadHistory();
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(history));
-        return;
-    }
-
-    // GET /api/status — pipeline status
-    if (req.method === 'GET' && url === '/api/status') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ running: pipelineRunning, last: lastStatus }));
-        return;
-    }
-
-    // POST /api/run — trigger pipeline
-    if (req.method === 'POST' && url === '/api/run') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Pipeline started.', running: true }));
-        // Run async (don't await — respond immediately)
-        runPipeline();
-        return;
-    }
-
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not found' }));
 });
 
-server.listen(PORT, () => {
-    console.log(`\n🚀 Pulse API server running on http://localhost:${PORT}`);
+app.get('/api/history', (req, res) => {
+    const history = loadHistory();
+    res.json(history);
+});
+
+app.get('/api/status', (req, res) => {
+    res.json({ running: pipelineRunning, last: lastStatus });
+});
+
+app.post('/api/run', (req, res) => {
+    res.json({ message: 'Pipeline started.', running: true });
+    // Run async (don't await — respond immediately)
+    runPipeline();
+});
+
+// ── Serve React Frontend ───────────────────────────────────────────────────────
+// Serve static files from dashboard/dist
+const buildPath = path.join(__dirname, 'dashboard', 'dist');
+app.use(express.static(buildPath));
+
+// For any other route, send the index.html so React Router (or SPA) works
+app.get('*', (req, res) => {
+    if (fs.existsSync(path.join(buildPath, 'index.html'))) {
+        res.sendFile(path.join(buildPath, 'index.html'));
+    } else {
+        res.status(404).send('Dashboard not built yet. Run "npm run build" in the dashboard directory.');
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`\n🚀 Pulse API & Dashboard server running on http://localhost:${PORT}`);
     console.log(`   GET  /api/pulse   — latest report`);
     console.log(`   GET  /api/history — all runs`);
     console.log(`   GET  /api/status  — pipeline status`);

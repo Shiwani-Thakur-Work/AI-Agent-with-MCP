@@ -4,8 +4,6 @@ import './index.css';
 import './App.css';
 import { mockHistory } from './data/mockData';
 
-const API = 'http://localhost:3001';
-
 function useApi() {
     const [history, setHistory]   = useState(mockHistory);   // fallback to mock
     const [loading, setLoading]   = useState(true);
@@ -14,8 +12,8 @@ function useApi() {
     const fetchAll = useCallback(async () => {
         try {
             const [hRes, pRes] = await Promise.all([
-                fetch(`${API}/api/history`),
-                fetch(`${API}/api/pulse`),
+                fetch(`/api/history`),
+                fetch(`/api/pulse`),
             ]);
             if (!hRes.ok || !pRes.ok) throw new Error('API error');
 
@@ -511,12 +509,12 @@ export default function App() {
     showToast('info', '⚡ Pipeline started — fetching reviews and analysing with Groq LLM…', 120000);
 
     try {
-      await fetch(`${API}/api/run`, { method: 'POST' });
+      await fetch(`/api/run`, { method: 'POST' });
 
       // Poll until done
       const poll = setInterval(async () => {
         try {
-          const s = await fetch(`${API}/api/status`).then(r => r.json());
+          const s = await fetch(`/api/status`).then(r => r.json());
           if (!s.running) {
             clearInterval(poll);
             setRunning(false);
