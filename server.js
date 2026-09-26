@@ -107,8 +107,8 @@ app.use((req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`\n🚀 Pulse API & Dashboard server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 Pulse API & Dashboard server running on port ${PORT}`);
     console.log(`   GET  /api/pulse   — latest report`);
     console.log(`   GET  /api/history — all runs`);
     console.log(`   GET  /api/status  — pipeline status`);
