@@ -39,7 +39,7 @@ function runPipeline() {
         pipelineRunning = true;
         console.log('[API] Starting pipeline…');
 
-        execFile('node', ['index.js'], { cwd: __dirname, timeout: 180_000 }, (err, stdout, stderr) => {
+        execFile('node', ['index.js'], { cwd: __dirname, env: process.env, timeout: 180_000 }, (err, stdout, stderr) => {
             pipelineRunning = false;
             if (err) {
                 console.error('[API] Pipeline error:', err.message);
