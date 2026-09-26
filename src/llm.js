@@ -93,7 +93,7 @@ async function generatePulseContent(reviews) {
                     },
                     { role: 'user', content: prompt }
                 ],
-                model: process.env.GROQ_MODEL || 'llama3-8b-8192',
+                model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
                 response_format: { type: 'json_object' },
                 max_tokens: MAX_OUT_TOKENS,
                 temperature: 0.3
