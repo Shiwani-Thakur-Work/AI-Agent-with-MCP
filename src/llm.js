@@ -3,149 +3,123 @@ const Groq = require('groq-sdk');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Priority-ordered list of preferred models (best quality first).
-// The first one found active on the account will be used.
+// Priority list — smaller/faster models first to stay within free-tier 8k TPM.
 const PREFERRED_MODELS = [
+    'llama-3.1-8b-instant',
+    'llama3-8b-8192',
     'llama-3.3-70b-versatile',
     'llama-3.1-70b-versatile',
     'llama3-70b-8192',
     'openai/gpt-oss-20b',
     'openai/gpt-oss-120b',
-    'llama-3.1-8b-instant',
-    'llama3-8b-8192',
 ];
 
-/**
- * Fetches the live model list from Groq and returns the best available model ID.
- * Falls back gracefully if the models endpoint is unavailable.
- */
+/** Queries the live Groq /models endpoint and returns the best available model. */
 async function resolveBestModel() {
-    // If the user pinned a model via env var, always honour it.
     if (process.env.GROQ_MODEL) {
-        console.log(`[LLM] Using pinned model from env: ${process.env.GROQ_MODEL}`);
+        console.log('[LLM] Using pinned model from env: ' + process.env.GROQ_MODEL);
         return process.env.GROQ_MODEL;
     }
-
     try {
-        const modelsPage = await groq.models.list();
-        const activeIds = new Set((modelsPage.data || []).map(m => m.id));
-
-        for (const candidate of PREFERRED_MODELS) {
-            if (activeIds.has(candidate)) {
-                console.log(`[LLM] Auto-selected model: ${candidate}`);
-                return candidate;
+        const page = await groq.models.list();
+        const activeIds = new Set((page.data || []).map(function(m) { return m.id; }));
+        for (var i = 0; i < PREFERRED_MODELS.length; i++) {
+            if (activeIds.has(PREFERRED_MODELS[i])) {
+                console.log('[LLM] Auto-selected model: ' + PREFERRED_MODELS[i]);
+                return PREFERRED_MODELS[i];
             }
         }
-
-        // None of our preferred models are available — use whatever is first
-        const firstAvailable = (modelsPage.data || [])[0]?.id;
-        if (firstAvailable) {
-            console.warn(`[LLM] No preferred model found. Falling back to: ${firstAvailable}`);
-            return firstAvailable;
+        var first = (page.data || [])[0] && (page.data || [])[0].id;
+        if (first) {
+            console.warn('[LLM] No preferred model available. Falling back to: ' + first);
+            return first;
         }
     } catch (err) {
-        console.warn('[LLM] Could not fetch model list, using hardcoded fallback:', err.message);
+        console.warn('[LLM] Could not fetch model list:', err.message);
     }
-
-    // Hard fallback if even the models endpoint fails
-    return 'llama-3.3-70b-versatile';
+    return 'llama-3.1-8b-instant';
 }
 
 /**
- * Processes reviews and generates a rich, structured Pulse report.
+ * Parse the x-ratelimit-reset-tokens header (e.g. '37.5s', '1m20s') into ms.
+ * Returns 0 if the header is missing or unparseable.
+ */
+function parseResetMs(headers) {
+    try {
+        var raw = headers && headers.get && headers.get('x-ratelimit-reset-tokens');
+        if (!raw) return 0;
+        var total = 0;
+        var mMatch = raw.match(/(\d+)m/);
+        var sMatch = raw.match(/([\d.]+)s/);
+        if (mMatch) total += parseInt(mMatch[1], 10) * 60000;
+        if (sMatch) total += parseFloat(sMatch[1]) * 1000;
+        return total;
+    } catch (e) {
+        return 0;
+    }
+}
+
+/**
+ * Processes reviews and generates a structured Pulse report.
  * @param {Array} reviews - Normalized reviews from ingestion
  * @returns {Promise<Object>} { report, emailDraft, themes, meta }
  */
 async function generatePulseContent(reviews) {
-    console.log(`[LLM] Processing ${reviews.length} reviews via Groq...`);
+    console.log('[LLM] Processing ' + reviews.length + ' reviews via Groq...');
 
-    const model = await resolveBestModel();
+    var model = await resolveBestModel();
 
-    // Token budget management.
-    // Groq free tier: ~8 000 TPM. Budget: prompt ~3 200 tok + output 2 800 tok.
-    const MAX_REVIEWS    = 80;
-    const MAX_REVIEW_LEN = 200;
-    const MAX_OUT_TOKENS = 2800;
+    // ── Aggressive token budget ────────────────────────────────────────────
+    // Free tier: 8 000 TPM.  Target: ~2 000 prompt + 1 200 output = 3 200 total.
+    // This leaves headroom even when tokens from a prior request haven't reset yet.
+    var MAX_REVIEWS    = 40;   // ~40 reviews × 30 tok avg = 1 200 tok
+    var MAX_REVIEW_LEN = 120;  // chars, ~30 tokens each
+    var MAX_OUT_TOKENS = 1200;
 
-    const reviewsToProcess = reviews.slice(0, MAX_REVIEWS);
+    var reviewsToProcess = reviews.slice(0, MAX_REVIEWS);
+    var today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    const today = new Date().toLocaleDateString('en-US', {
-        month: 'long', day: 'numeric', year: 'numeric'
-    });
+    var reviewsText = reviewsToProcess.map(function(r) {
+        var text = (r.text || '').slice(0, MAX_REVIEW_LEN);
+        return '[' + r.rating + 'star] ' + text;
+    }).join('\n');
 
-    const reviewsText = reviewsToProcess
-        .map(r => {
-            const text = (r.text || '').slice(0, MAX_REVIEW_LEN);
-            return `[${r.rating}★] ${text}`;
-        })
-        .join('\n');
-
-    const themeIds = 'ads, playback, discovery, ui, offline, performance, content, pricing, support';
-    const jsonStructure = JSON.stringify({
-        meta: {
-            totalReviews: '<number>',
-            weeksAnalysed: 12,
-            generatedAt: '<ISO date string>',
-            sentimentBreakdown: { positive: '<0-100>', neutral: '<0-100>', negative: '<0-100>' }
-        },
-        themes: [{
-            id: '<one of: ' + themeIds + '>',
-            title: '<short title>',
-            icon: '<one relevant emoji>',
-            description: '<2-sentence description>',
-            percentage: '<integer>',
-            quotes: ['<quote 1>', '<quote 2>'],
-            actionItem: '<specific action>'
-        }],
-        report: '<200-250 word executive summary>',
-        emailDraft: '<email text starting with Subject: on first line>'
-    }, null, 2);
-
-    const buildPrompt = (reviewsText, today) => [
-        'You are a senior product analyst. Analyse the following user reviews and produce a structured feedback pulse report.',
-        '',
-        'Todays date: ' + today,
-        '',
-        'ANALYSIS REQUIREMENTS:',
-        '1. Identify exactly 3 dominant themes. Each must be supported by multiple reviews.',
-        '2. For each theme: short title (max 5 words), 2-sentence description, 2 verbatim user quotes (strip PII), percentage of negative reviews mentioning it (roughly 80-90 percent total), one actionable product recommendation, one id from: ' + themeIds + '.',
-        '3. Sentiment breakdown summing to 100: positive percent, neutral percent, negative percent.',
-        '4. Executive summary (200-250 words): overall state, each theme, next steps, sentiment direction. Strip all PII.',
-        '5. Email to product team (100-150 words): addressed to Team, names the 3 themes, includes [REPORT_URL], signed Best,\\nShiwani\\nProduct Manager.',
-        '',
-        'RESPOND IN RAW JSON ONLY - no markdown, no code fences, no extra text:',
-        jsonStructure,
+    // Compact prompt — NO JSON schema example (saves ~400 tokens).
+    // Field names are described inline so the model knows exactly what to produce.
+    var prompt = [
+        'Analyse these ' + reviewsToProcess.length + ' app reviews (date: ' + today + ').',
+        'Return ONLY a raw JSON object with these exact keys:',
+        '  meta: { totalReviews(int), weeksAnalysed(12), generatedAt(ISO), sentimentBreakdown:{positive,neutral,negative as ints summing to 100} }',
+        '  themes: array of exactly 3 objects: { id(one of ads/playback/discovery/ui/offline/performance/content/pricing/support), title(<=5 words), icon(emoji), description(2 sentences), percentage(int), quotes:[2 verbatim strings, strip PII], actionItem(string) }',
+        '  report: string, 150-word executive summary',
+        '  emailDraft: string starting with Subject:, 80 words, signed Best\\nShiwani\\nProduct Manager, includes [REPORT_URL]',
+        'No markdown. No code fences. No extra text. Just the JSON.',
         '',
         'REVIEWS:',
         reviewsText
     ].join('\n');
 
-    const MAX_RETRIES = 3;
-    let lastError;
+    var MAX_RETRIES = 3;
+    var lastError;
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    for (var attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-            const prompt = buildPrompt(reviewsText, today);
-            const response = await groq.chat.completions.create({
+            var response = await groq.chat.completions.create({
                 messages: [
-                    {
-                        role: 'system',
-                        content: 'You are an expert product analyst. Output raw, valid JSON only - no markdown, no code fences, no extra text before or after the JSON object.'
-                    },
-                    { role: 'user', content: prompt }
+                    { role: 'system', content: 'You are a product analyst. Respond with a single raw JSON object only.' },
+                    { role: 'user',   content: prompt }
                 ],
-                model,
+                model: model,
                 response_format: { type: 'json_object' },
                 max_tokens: MAX_OUT_TOKENS,
                 temperature: 0.3
             });
 
-            const resultText = response.choices[0]?.message?.content;
-            if (!resultText) throw new Error('Empty response received from Groq');
+            var resultText = response.choices[0] && response.choices[0].message && response.choices[0].message.content;
+            if (!resultText) throw new Error('Empty response from Groq');
 
-            const parsed = JSON.parse(resultText);
-
-            console.log(`[LLM] Successfully generated rich Pulse report (model: ${model}).`);
+            var parsed = JSON.parse(resultText);
+            console.log('[LLM] Success (model: ' + model + ').');
             return {
                 report:     parsed.report     || '',
                 emailDraft: parsed.emailDraft || '',
@@ -155,30 +129,40 @@ async function generatePulseContent(reviews) {
 
         } catch (error) {
             lastError = error;
+            var code   = error && error.error && error.error.error && error.error.error.code;
+            var failedGen = error && error.error && error.error.error && error.error.error.failed_generation;
 
-            const isRateLimit      = error?.status === 429;
-            const isJsonValidation = error?.error?.error?.code === 'json_validate_failed';
-            const isModelGone      = error?.status === 404 || error?.error?.error?.code === 'model_decommissioned';
+            var isRateLimit    = error.status === 429;
+            var isModelGone    = error.status === 404 || code === 'model_decommissioned';
+            // failed_generation==='' means the model ran out of output tokens (token exhaustion),
+            // not a bad prompt. Treat it like a rate-limit: wait for the TPM window to reset.
+            var isTokenExhaust = code === 'json_validate_failed' && failedGen === '';
+            var isJsonError    = code === 'json_validate_failed' && failedGen !== '';
 
             if (isModelGone) {
-                // Model disappeared mid-run — this should never happen after resolveBestModel(),
-                // but if it does, bail immediately (no retry) so the error is visible.
-                console.error(`[LLM] Model ${model} not found. Set GROQ_MODEL in your secrets to override.`);
+                console.error('[LLM] Model ' + model + ' not found. Set GROQ_MODEL secret to override.');
                 throw error;
             }
 
-            if ((isRateLimit || isJsonValidation) && attempt < MAX_RETRIES) {
-                const waitMs = Math.pow(2, attempt) * 15000; // 30s, then 60s
-                console.warn(
-                    `[LLM] Attempt ${attempt}/${MAX_RETRIES} failed` +
-                    ` (${isRateLimit ? 'rate-limit' : 'JSON validation'}).` +
-                    ` Retrying in ${waitMs / 1000}s...`
-                );
-                await new Promise(res => setTimeout(res, waitMs));
+            if (attempt < MAX_RETRIES) {
+                var waitMs;
+                if (isTokenExhaust || isRateLimit) {
+                    // Read the exact reset time from the response header, add a 5s buffer.
+                    var resetMs = parseResetMs(error.headers);
+                    waitMs = resetMs > 0 ? resetMs + 5000 : 65000;
+                    console.warn('[LLM] Token quota exhausted on attempt ' + attempt + '. Waiting ' + Math.ceil(waitMs / 1000) + 's for TPM window reset...');
+                } else if (isJsonError) {
+                    waitMs = 5000;
+                    console.warn('[LLM] JSON validation error on attempt ' + attempt + '. Retrying in 5s...');
+                } else {
+                    waitMs = 10000;
+                    console.warn('[LLM] Unexpected error on attempt ' + attempt + '. Retrying in 10s...');
+                }
+                await new Promise(function(res) { setTimeout(res, waitMs); });
                 continue;
             }
 
-            console.error('[LLM] Error communicating with Groq:', error);
+            console.error('[LLM] All attempts failed:', error.message || error);
             throw error;
         }
     }
