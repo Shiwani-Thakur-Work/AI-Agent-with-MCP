@@ -3,23 +3,30 @@ const Groq = require('groq-sdk');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Priority list: smaller/faster models first to stay within free-tier 8k TPM.
-// Includes both meta-llama/ prefix (current) and legacy bare IDs for compatibility.
-// openai/gpt-oss-* models excluded — they are reasoning models incompatible with json_object mode.
+// Priority list of chat-completion-compatible models, best first.
+// NOTE: openai/gpt-oss-* are reasoning models — incompatible with json_object mode, excluded.
+// NOTE: whisper-* are speech models — incompatible with chat completions, excluded.
 const PREFERRED_MODELS = [
-    'meta-llama/llama-3.1-8b-instant',
+    'qwen/qwen3.8-27b',
+    'allam-2-7b',
     'meta-llama/llama-3.3-70b-versatile',
     'meta-llama/llama-3.1-70b-versatile',
+    'meta-llama/llama-3.1-8b-instant',
     'meta-llama/llama3-70b-8192',
-    'llama-3.1-8b-instant',
     'llama-3.3-70b-versatile',
     'llama-3.1-70b-versatile',
+    'llama-3.1-8b-instant',
     'llama3-70b-8192',
     'llama3-8b-8192',
 ];
 
-// Prefixes for models known to be incompatible with response_format:json_object.
-const EXCLUDED_PREFIXES = ['openai/gpt-oss', 'qwen'];
+// Models/prefixes known to be incompatible with chat completions or json_object mode.
+const EXCLUDED_PREFIXES = [
+    'meta-llama/llama-prompt-guard',
+    'whisper',
+    'canopylabs',
+    'openai/gpt-oss',  // reasoning models — incompatible with json_object
+];
 
 function isExcluded(id) {
     return EXCLUDED_PREFIXES.some(function(p) { return id.indexOf(p) === 0; });
@@ -41,15 +48,13 @@ async function resolveBestModel() {
                 return PREFERRED_MODELS[i];
             }
         }
-        // No preferred model found — pick first non-excluded model
-        var compatible = (page.data || []).filter(function(m) { return !isExcluded(m.id); });
-        if (compatible.length > 0) {
-            console.warn('[LLM] No preferred model found. Falling back to: ' + compatible[0].id);
-            return compatible[0].id;
-        }
+        // No preferred model found — fall back to safe hardcoded model rather than
+        // blindly picking the first API-returned model (which may be a speech/guard model).
+        console.warn('[LLM] No preferred model found in live list. Using hardcoded safe fallback.');
     } catch (err) {
         console.warn('[LLM] Could not fetch model list:', err.message);
     }
+    console.warn('[LLM] Defaulting to: meta-llama/llama-3.1-8b-instant');
     return 'meta-llama/llama-3.1-8b-instant';
 }
 
