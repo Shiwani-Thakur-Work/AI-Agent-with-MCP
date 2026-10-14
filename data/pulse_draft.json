@@ -1,54 +1,54 @@
 {
-  "id": "run-1790352804141",
-  "week": "Week of Sep 25, 2026",
-  "date": "2026-09-25",
-  "totalReviews": 184,
-  "playStore": 105,
-  "appStore": 79,
+  "id": "run-1791962090113",
+  "week": "Week of Oct 14, 2026",
+  "date": "2026-10-14",
+  "totalReviews": 151,
+  "playStore": 113,
+  "appStore": 38,
   "sentiment": {
-    "positive": 53,
+    "positive": 55,
     "neutral": 20,
-    "negative": 27
+    "negative": 25
   },
   "themes": [
     {
       "id": "ads",
-      "title": "Excessive Advertising",
+      "title": "Intrusive Ad Frequency",
       "icon": "📢",
-      "description": "A large share of dissatisfied users cite frequent and intrusive ads as a major pain point. The ads interrupt listening sessions, appear after every few songs, and are perceived as a forced upsell to premium. This frustration drives churn among free-tier listeners.",
-      "percentage": 30,
+      "description": "Users frequently complain about the high volume of advertisements interrupting their listening experience. This friction is a primary driver for negative sentiment among free-tier users.",
+      "percentage": 35,
       "quotes": [
-        "plz block this app too many ads",
-        "Too many ADs and not enough skips."
+        "Good but so many adsss",
+        "I get ads after every song."
       ],
-      "actionItem": "Introduce a limited‑ads free tier (e.g., 3‑minute ad cap per hour) and clearly communicate the value of premium removal."
+      "actionItem": "Optimize ad insertion logic to reduce frequency during continuous playback sessions."
     },
     {
       "id": "pricing",
-      "title": "Premium Cost Concerns",
-      "icon": "💰",
-      "description": "Many reviewers feel the subscription price is too high and the price hikes are not justified. Users mention unexpected price increases and compare the cost unfavorably to the perceived value, especially when core features are locked behind the paywall.",
+      "title": "Premium Feature Restrictions",
+      "icon": "💳",
+      "description": "Frustration is evident regarding the paywall for basic features like song selection and shuffle control. Users feel that core listening capabilities are artificially limited to drive subscriptions.",
       "percentage": 30,
       "quotes": [
-        "Just got an email saying premium prices is going up to $12.99 and I'm just gonna delete my account entirely.",
-        "No reason to raise ur price"
+        "WHAT DO YOU MEAN YOU NEED TO PAY JUST FOR YOU TO CHOOSE ANY SONG",
+        "I dont like that I have to pay to let the music go In order and not shuffle"
       ],
-      "actionItem": "Offer flexible pricing options such as a lower‑cost tier with limited skips or a family plan discount to reduce price sensitivity."
+      "actionItem": "Review paywall strategy to allow basic shuffle and selection for free users."
     },
     {
-      "id": "performance",
-      "title": "Playback & Stability Issues",
-      "icon": "⚙️",
-      "description": "Technical glitches—including random app crashes, offline mode failures, and stuttering playback—are repeatedly reported. These problems affect both free and premium users, undermining trust in the platform's reliability.",
-      "percentage": 30,
+      "id": "ui",
+      "title": "Interface and Playback Bugs",
+      "icon": "📱",
+      "description": "Reports indicate significant issues with the user interface, including disappearing mini-players and unreliable offline support. These technical glitches disrupt the seamless listening experience users expect.",
+      "percentage": 25,
       "quotes": [
-        "The app keeps closing randomly when I'm running it on background.",
-        "It keeps stating that I'm offline initially after launching the app."
+        "terrible antiquated UI, unreliable offline support and a broken region locking/region change process",
+        "The mini player ui disappears alot forcing me to restart the all if I want to change songs."
       ],
-      "actionItem": "Prioritize a stability sprint to fix offline detection, reduce background crashes, and optimize playback buffering across devices."
+      "actionItem": "Prioritize bug fixes for mini-player visibility and offline mode stability."
     }
   ],
-  "report": "Executive Summary\n\nOverall, Spotify remains a beloved music platform with a strong base of satisfied users, but three critical pain points are eroding the experience for a sizable minority. \n\n1. Excessive Advertising – Free‑tier listeners are repeatedly interrupted by ads, often after every few songs, leading to frustration and a perception that the service is pushing users toward paid plans. Evidence includes comments like \"plz block this app too many ads\" and \"Too many ADs and not enough skips.\" Reducing ad frequency or offering a capped‑ads tier would address this.\n\n2. Premium Cost Concerns – Price hikes and the high baseline subscription fee are viewed as unjustified, especially when core features feel locked. Users wrote, \"Just got an email saying premium prices is going up to $12.99...\" and \"No reason to raise ur price.\" Introducing tiered pricing or discounted family plans could soften this backlash.\n\n3. Playback & Stability Issues – Technical instability, such as random crashes and offline mode errors, appears in many negative reviews. Sample feedback: \"The app keeps closing randomly when I'm running it on background\" and \"It keeps stating that I'm offline initially after launching the app.\" A focused stability sprint is needed.\n\nNext Steps:\n- Launch a limited‑ads free tier and communicate its benefits.\n- Test and roll out a lower‑cost subscription option with partial premium features.\n- Allocate engineering resources to resolve offline detection bugs and improve background stability.\n\nSentiment is currently tilted positive (53% satisfied), but the identified themes explain the 27% negative sentiment and highlight clear opportunities to improve retention and user happiness.",
-  "emailDraft": "Subject: Weekly Pulse Report – Key Findings & Action Items\n\nTeam,\n\nPlease find the latest pulse report attached: https://docs.google.com/document/d/1F2ZVIJwyLtkFHCJbUKeltOk4Fr8g5KH_TlMFFcKGc1c/edit\n\nThe analysis highlights three dominant themes affecting our users:\n- Excessive Advertising\n- Premium Cost Concerns\n- Playback & Stability Issues\n\nEach theme includes user quotes, impact percentages, and a concrete recommendation for the product roadmap. Addressing these areas will help us reduce churn and improve overall sentiment.\n\nLet’s discuss the proposed actions in our next sync and prioritize the stability sprint and pricing experiments.\n\nBest,\nShiwani\nProduct Manager",
+  "report": "This analysis of 40 recent Spotify reviews from October 2026 reveals a polarized user base. While 55% of sentiment is positive, driven by the vast music library and daily utility, 25% is negative, primarily fueled by aggressive advertising and restrictive paywalls. The top theme is ad frequency, with 35% of users citing intrusive interruptions as a major pain point. Following closely is pricing frustration (30%), where users resent paying for basic controls like shuffle and song selection. Technical issues, including UI bugs and offline failures, account for 25% of negative feedback. The data suggests that while content quality remains a strong retention driver, the free-tier experience is deteriorating due to ad saturation and feature gating. Immediate action is required to balance monetization with user satisfaction, specifically by reducing ad load and relaxing basic playback restrictions for non-premium users to prevent churn.",
+  "emailDraft": "Subject: Urgent: Addressing Ad Fatigue and Paywall Friction\n\nHi Team,\n\nOur latest review analysis highlights a critical risk to user retention. While content remains a strength, 35% of users are frustrated by excessive ads, and 30% are upset by paywalled basic features like shuffle control. Additionally, UI bugs are impacting 25% of negative feedback. We must immediately reduce ad frequency for free users and review our feature gating strategy to prevent churn. Please review the full report at https://docs.google.com/document/d/1F2ZVIJwyLtkFHCJbUKeltOk4Fr8g5KH_TlMFFcKGc1c/edit for detailed insights and proposed actions.\n\nBest\nShiwani\nProduct Manager",
   "docUrl": "https://docs.google.com/document/d/1F2ZVIJwyLtkFHCJbUKeltOk4Fr8g5KH_TlMFFcKGc1c/edit"
 }

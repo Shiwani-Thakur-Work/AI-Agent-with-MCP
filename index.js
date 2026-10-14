@@ -58,29 +58,39 @@ async function main() {
         console.log('\n========================================');
 
         // Step 4 + 5: MCP (Google Docs + Gmail) — non-fatal if MCP server is unavailable
+        let mcpClient = null;
         try {
             console.log('\n[Step 4] Calling Google Docs MCP to append the report...');
             const documentId = process.env.PULSE_DOC_ID;
             let docUrl = null;
 
-            const mcpClient = await createMCPClient({ 
+            mcpClient = await createMCPClient({ 
                 serverUrl: process.env.MCP_SERVER_URL || 'http://localhost:3000/sse' 
             });
 
             if (documentId) {
                 try {
                     const timestamp = new Date().toUTCString();
-                    await mcpClient.callTool({
+                    const docResult = await mcpClient.callTool({
                         name: 'google_docs_append_content',
                         arguments: {
                             documentId,
                             content: `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nWeekly Pulse Report — ${timestamp}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${report}`
                         }
                     });
-                    docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
-                    draft.docUrl = docUrl;
-                    fs.writeFileSync(draftPath, JSON.stringify(draft, null, 2));
-                    console.log(`[MCP Docs] Appended. Doc URL: ${docUrl}`);
+
+                    if (docResult && docResult.isError) {
+                        const errMsg = docResult.content?.map(c => c.text).join(' ') || 'Unknown MCP error';
+                        console.warn('[MCP Docs] Failed to append to Google Doc:', errMsg);
+                        if (errMsg.includes('invalid_grant')) {
+                            console.warn('  --> [Action Required] Google OAuth token is expired or revoked (invalid_grant). Please re-authenticate your Google Account.');
+                        }
+                    } else {
+                        docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
+                        draft.docUrl = docUrl;
+                        fs.writeFileSync(draftPath, JSON.stringify(draft, null, 2));
+                        console.log(`[MCP Docs] Appended successfully. Doc URL: ${docUrl}`);
+                    }
                 } catch (err) {
                     console.warn('[MCP Docs] Could not append to Google Doc:', err.message);
                 }
@@ -96,17 +106,32 @@ async function main() {
                 const lines   = finalEmail.split('\n');
                 const subject = lines[0].replace('Subject:', '').trim();
                 const body    = lines.slice(2).join('\n').trim();
-                await mcpClient.callTool({
+                const gmailResult = await mcpClient.callTool({
                     name: 'gmail_create_draft',
                     arguments: { to: [process.env.RECEIVER_EMAIL || 'shiwanithakur5498@gmail.com'], subject, body }
                 });
-                console.log('[MCP Gmail] Draft created successfully.');
+
+                if (gmailResult && gmailResult.isError) {
+                    const errMsg = gmailResult.content?.map(c => c.text).join(' ') || 'Unknown MCP error';
+                    console.warn('[MCP Gmail] Failed to create Gmail draft:', errMsg);
+                } else {
+                    console.log('[MCP Gmail] Draft created successfully.');
+                }
             } catch (err) {
                 console.warn('[MCP Gmail] Could not create Gmail draft:', err.message);
             }
         } catch (mcpErr) {
-            console.warn('\n[Warning] MCP Server unavailable — skipping Docs/Gmail steps. Draft saved locally.');
+            console.warn('\n[Warning] MCP Server unavailable — skipping Docs/Gmail steps. Draft saved locally:', mcpErr.message);
             console.warn('  Start the MCP Server with: npm run start (in the MCP Server folder)');
+        } finally {
+            if (mcpClient) {
+                try {
+                    await mcpClient.close();
+                    console.log('[MCP] Closed connection to MCP Server cleanly.');
+                } catch (closeErr) {
+                    // ignore disconnect errors
+                }
+            }
         }
 
         console.log('\n--- Weekly Pulse Pipeline Completed ---');
@@ -116,5 +141,12 @@ async function main() {
     }
 }
 
-if (require.main === module) { main(); }
+if (require.main === module) {
+    main().then(() => {
+        process.exit(0);
+    }).catch((err) => {
+        console.error('\n[Fatal Error]:', err);
+        process.exit(1);
+    });
+}
 module.exports = { main };
