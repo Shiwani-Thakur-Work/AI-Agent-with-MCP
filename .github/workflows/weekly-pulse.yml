@@ -15,13 +15,41 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    - name: Checkout MCP Server
+      uses: actions/checkout@v4
+      with:
+        repository: Shiwani-Thakur-Work/MCP-Server
+        path: mcp-server
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
 
-    - name: Install Dependencies
+    - name: Install Agent Dependencies
       run: npm install
+
+    - name: Start Embedded MCP Server
+      env:
+        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        GOOGLE_REDIRECT_URI: http://localhost:3000/oauth2callback
+        GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+        PORT: 3000
+      run: |
+        cd mcp-server
+        npm install
+        npm run build
+        node build/index.js &
+        cd ..
+        echo "Waiting for MCP server to start on port 3000..."
+        for i in {1..30}; do
+          if curl -s http://localhost:3000/health | grep -q "OK"; then
+            echo "MCP Server is healthy and ready!"
+            break
+          fi
+          sleep 1
+        done
 
     - name: Run Weekly Pulse Orchestrator
       env:
@@ -29,7 +57,7 @@ jobs:
         GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
         PULSE_DOC_ID: ${{ secrets.PULSE_DOC_ID }}
         RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
-        MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL }}
+        MCP_SERVER_URL: http://localhost:3000/sse
         PLAY_STORE_APP_IDS: ${{ secrets.PLAY_STORE_APP_IDS }}
         APP_STORE_APP_IDS: ${{ secrets.APP_STORE_APP_IDS }}
       run: node index.js
